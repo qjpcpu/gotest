@@ -1,6 +1,11 @@
 package main
 
+import (
+	"github.com/qjpcpu/common/debug"
+)
+
 func main() {
-	cmd := SelectSingleTest(".")
-	execCommand(cmd)
+	if cmd := SelectSingleTest("."); cmd != "" {
+		debug.Exec(cmd)
+	}
 }

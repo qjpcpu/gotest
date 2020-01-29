@@ -131,3 +131,11 @@ func (s FileTestSuite) SuiteNames() []string {
 func (s FileTestSuite) SuiteFunctions(name string) []string {
 	return s.testFunctions[name]
 }
+
+func (s FileTestSuite) Size() int {
+	var total int
+	for _, v := range s.testFunctions {
+		total += len(v)
+	}
+	return total
+}
