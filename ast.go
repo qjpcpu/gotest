@@ -37,6 +37,10 @@ func ParseTestSuiteFile(filename string) FileTestSuite {
 	f, err := parser.ParseFile(fset, filename, nil, 0)
 	debug.ShouldBeNil(err)
 
+	if debug.IsDebug() {
+		ast.Print(fset, f)
+	}
+
 	typeToMainFunc := make(map[string]string)
 	typeMethods := make(map[string][]string)
 	simpleGoTest := make(map[string]bool)
@@ -53,17 +57,40 @@ func ParseTestSuiteFile(filename string) FileTestSuite {
 				debug.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).Sel.Name, "T")
 
 				if isSimpleTest := debug.AllowPanic(func() {
-					tname := declFn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.UnaryExpr).X.(*ast.CompositeLit).Type.(*ast.Ident).Name
-					typeToMainFunc[tname] = name
+					callExpr := declFn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
+					debug.ShouldEqual(callExpr.Fun.(*ast.SelectorExpr).Sel.Name, "Run")
+					debug.ShouldSuccessAtLeastOne(
+						func() {
+							tname := callExpr.Args[1].(*ast.UnaryExpr).X.(*ast.CompositeLit).Type.(*ast.Ident).Name
+							typeToMainFunc[tname] = name
+						},
+						func() {
+							tname := callExpr.Args[1].(*ast.CallExpr).Args[0].(*ast.Ident).Name
+							typeToMainFunc[tname] = name
+						},
+						func() {
+							tname := callExpr.Args[1].(*ast.CompositeLit).Type.(*ast.Ident).Name
+							typeToMainFunc[tname] = name
+						},
+					)
 				}); isSimpleTest {
 					simpleGoTest[name] = true
 				}
 			})
 			debug.AllowPanic(func() {
-				name := declFn.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
-				debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+				debug.ShouldSuccessAtLeastOne(
+					func() {
+						name := declFn.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
+						debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+						typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
+					},
+					func() {
+						name := declFn.Recv.List[0].Type.(*ast.Ident).Name
+						debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+						typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
+					},
+				)
 
-				typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
 			})
 		}
 	}

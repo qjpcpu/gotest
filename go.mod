@@ -3,6 +3,6 @@ module github.com/qjpcpu/gotest
 go 1.13
 
 require (
-	github.com/manifoldco/promptui v0.7.0
-	github.com/qjpcpu/common v0.0.0-20200202080131-d106acd00be4
+	github.com/qjpcpu/common v0.0.0-20200202095251-237999b00382
+	github.com/stretchr/testify v1.4.0
 )

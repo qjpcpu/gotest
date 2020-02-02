@@ -41,8 +41,12 @@ func SelectSingleTest(dirname string) (name, fn string) {
 		var list []string
 		for _, n := range suites.SuiteNames() {
 			fns := suites.SuiteFunctions(n)
-			for _, f := range fns {
-				list = append(list, fmt.Sprintf("%s.%s", n, f))
+			if len(fns) > 0 {
+				for _, f := range fns {
+					list = append(list, fmt.Sprintf("%s.%s", n, f))
+				}
+			} else {
+				list = append(list, n)
 			}
 		}
 		_, res := debug.Select("Select test function", list, func(s *debug.SelectWidget) {
@@ -57,7 +61,11 @@ func SelectSingleTest(dirname string) (name, fn string) {
 		if res == "" {
 			return
 		}
-		name, fn = strings.Split(res, ".")[0], strings.Split(res, ".")[1]
+		debug.AllowPanic(func() {
+			arr := strings.Split(res, ".")
+			name = arr[0]
+			fn = arr[1]
+		})
 	}
 	return
 }
