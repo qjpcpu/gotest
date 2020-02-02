@@ -1,11 +1,7 @@
 package main
 
-import (
-	"github.com/qjpcpu/common/debug"
-)
+import "os"
 
 func main() {
-	if cmd := SelectSingleTest("."); cmd != "" {
-		debug.Exec(cmd)
-	}
+	SelectAndRunTest(getTestDir(os.Args))
 }
