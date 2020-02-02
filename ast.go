@@ -164,3 +164,35 @@ func (s FileTestSuite) Size() int {
 	}
 	return total
 }
+
+func (s FileTestSuite) SetTop(name, fn string) FileTestSuite {
+	for i, n := range s.testNames {
+		if n == name {
+			s.testNames[0], s.testNames[i] = s.testNames[i], s.testNames[0]
+			fns := s.testFunctions[n]
+			for j, f := range fns {
+				if fn != "" && f == fn {
+					fns[0], fns[j] = fns[j], fns[0]
+					break
+				}
+			}
+			s.testFunctions[n] = fns
+			break
+		}
+	}
+	return s
+}
+
+func ReorderByHistory(s FileTestSuite, dir string, items []Item) FileTestSuite {
+	if len(items) > 0 {
+		dirAbs, err := filepath.Abs(dir)
+		debug.ShouldBeNil(err)
+		item := items[0]
+		hAbs, err := filepath.Abs(item.Dir)
+		debug.ShouldBeNil(err)
+		if hAbs == dirAbs {
+			s = s.SetTop(item.Test, item.Module)
+		}
+	}
+	return s
+}

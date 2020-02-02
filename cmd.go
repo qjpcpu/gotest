@@ -9,12 +9,13 @@ import (
 	"github.com/qjpcpu/common/debug"
 )
 
-func SelectSingleTest(dirname string) (name, fn string) {
+func SelectSingleTest(dirname string, historyItems []Item) (name, fn string) {
 	suites := LoadTestFiles(dirname)
 	if suites.Size() == 0 {
 		debug.Print("No tests found")
 		return
 	}
+	suites = ReorderByHistory(suites, dirname, historyItems)
 	if suites.Size() > 20 {
 		suiteNames := suites.SuiteNames()
 		_, name = debug.Select("Select test suite", suiteNames, func(s *debug.SelectWidget) {
@@ -93,12 +94,13 @@ func buildTestCommand(dir string, name, fn string) string {
 }
 
 func SelectAndRunTest(dir string) {
-	name, fn := SelectSingleTest(dir)
+	items := History.Get(1)
+	name, fn := SelectSingleTest(dir, items)
 	if len(name) == 0 {
 		return
 	}
 	cmd := buildTestCommand(dir, name, fn)
-	WriteCmdHistory(cmd)
+	History.Append(Item{Dir: dir, Test: name, Module: fn})
 	debug.Exec(cmd)
 }
 
