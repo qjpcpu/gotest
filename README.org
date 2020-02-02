@@ -1,5 +1,5 @@
 * usage
 
   #+begin_src 
-testify
+gotest
   #+end_src

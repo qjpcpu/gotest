@@ -39,50 +39,44 @@ func ParseTestSuiteFile(filename string) FileTestSuite {
 
 	typeToMainFunc := make(map[string]string)
 	typeMethods := make(map[string][]string)
+	simpleGoTest := make(map[string]bool)
 	for _, decl := range f.Decls {
 		/* function */
 		if declFn, ok := decl.(*ast.FuncDecl); ok {
-			safeRun(func() {
+			debug.AllowPanic(func() {
 				declFn := decl.(*ast.FuncDecl)
 				name := declFn.Name.Name
-				if !strings.HasPrefix(name, "Test") {
-					panic("bad type")
+				debug.ShouldBeTrue(strings.HasPrefix(name, "Test"))
+
+				debug.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).X.(*ast.Ident).Name, "testing")
+
+				debug.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).Sel.Name, "T")
+
+				if isSimpleTest := debug.AllowPanic(func() {
+					tname := declFn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.UnaryExpr).X.(*ast.CompositeLit).Type.(*ast.Ident).Name
+					typeToMainFunc[tname] = name
+				}); isSimpleTest {
+					simpleGoTest[name] = true
 				}
-				if declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).X.(*ast.Ident).Name != "testing" {
-					panic("bad test")
-				}
-				if declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).Sel.Name != "T" {
-					panic("bad test")
-				}
-				tname := declFn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.UnaryExpr).X.(*ast.CompositeLit).Type.(*ast.Ident).Name
-				typeToMainFunc[tname] = name
 			})
-			safeRun(func() {
+			debug.AllowPanic(func() {
 				name := declFn.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
-				if !strings.HasPrefix(declFn.Name.Name, "Test") {
-					panic("bad func")
-				}
+				debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+
 				typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
 			})
 		}
 	}
 	ret := make(map[string][]string)
+	for fn := range simpleGoTest {
+		ret[fn] = []string{}
+	}
 	for tp, methods := range typeMethods {
 		if fn, ok := typeToMainFunc[tp]; ok {
 			ret[fn] = methods
 		}
 	}
 	return makeSuite(ret)
-}
-
-func safeRun(f func()) (ok bool) {
-	defer func() {
-		recover()
-		ok = false
-	}()
-	f()
-	ok = true
-	return
 }
 
 type FileTestSuite struct {
@@ -135,7 +129,11 @@ func (s FileTestSuite) SuiteFunctions(name string) []string {
 func (s FileTestSuite) Size() int {
 	var total int
 	for _, v := range s.testFunctions {
-		total += len(v)
+		if len(v) > 0 {
+			total += len(v)
+		} else {
+			total++
+		}
 	}
 	return total
 }

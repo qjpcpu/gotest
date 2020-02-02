@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/qjpcpu/common/debug"
 )
 
@@ -17,21 +16,27 @@ func SelectSingleTest(dirname string) (name, fn string) {
 		return
 	}
 	if suites.Size() > 20 {
-		_, name = debug.Select("Select test suite", suites.SuiteNames(), func(s *promptui.Select) {
+		suiteNames := suites.SuiteNames()
+		_, name = debug.Select("Select test suite", suiteNames, func(s *debug.SelectWidget) {
 			s.Size = 20
 			s.IsVimMode = true
 			s.HideSelected = true
-		})
-		_, fn = debug.Select("Select test function", suites.SuiteFunctions(name), func(s *promptui.Select) {
-			s.Size = 20
-			s.IsVimMode = true
-			s.HideSelected = true
-			s.StartInSearchMode = false
-			fns := suites.SuiteFunctions(name)
 			s.Searcher = func(input string, index int) bool {
-				return strings.Contains(strings.ToLower(fns[index]), strings.ToLower(input))
+				return strings.Contains(strings.ToLower(suiteNames[index]), strings.ToLower(input))
 			}
 		})
+		if len(suites.SuiteFunctions(name)) > 0 {
+			_, fn = debug.Select("Select test function", suites.SuiteFunctions(name), func(s *debug.SelectWidget) {
+				s.Size = 20
+				s.IsVimMode = true
+				s.HideSelected = true
+				s.StartInSearchMode = false
+				fns := suites.SuiteFunctions(name)
+				s.Searcher = func(input string, index int) bool {
+					return strings.Contains(strings.ToLower(fns[index]), strings.ToLower(input))
+				}
+			})
+		}
 	} else {
 		var list []string
 		for _, n := range suites.SuiteNames() {
@@ -40,7 +45,7 @@ func SelectSingleTest(dirname string) (name, fn string) {
 				list = append(list, fmt.Sprintf("%s.%s", n, f))
 			}
 		}
-		_, res := debug.Select("Select test function", list, func(s *promptui.Select) {
+		_, res := debug.Select("Select test function", list, func(s *debug.SelectWidget) {
 			s.Size = 20
 			s.IsVimMode = true
 			s.HideSelected = true
@@ -58,10 +63,10 @@ func SelectSingleTest(dirname string) (name, fn string) {
 }
 
 func buildTestCommand(dir string, name, fn string) string {
-	format := "go test --test.v --run '^%s$' --testify.m '^%s$'"
+	format := "go test --run '^%s$' --testify.m '^%s$' --test.v"
 	args := []interface{}{name, fn}
 	if fn == "" {
-		format = "go test --test.v --run '^%s$'"
+		format = "go test --run '^%s$' --test.v"
 		args = []interface{}{name}
 	}
 
@@ -69,9 +74,9 @@ func buildTestCommand(dir string, name, fn string) string {
 	debug.ShouldBeNil(err)
 	wd, err = filepath.Abs(wd)
 	debug.ShouldBeNil(err)
-	dir, err = filepath.Abs(dir)
+	dirAbs, err := filepath.Abs(dir)
 	debug.ShouldBeNil(err)
-	if wd != dir {
+	if wd != dirAbs {
 		format = "cd '%s' && " + format
 		args = append([]interface{}{dir}, args...)
 	}
