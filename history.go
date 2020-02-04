@@ -17,27 +17,53 @@ type Item struct {
 }
 
 type HistoryTracker interface {
-	Get(limit int) []Item
+	Get(string) *Item
 	Append(Item)
 }
 
 type historyFileTracker struct{}
 
-func (t historyFileTracker) Get(limit int) (items []Item) {
+func dirnameAbs(dir string) string {
+	p, err := filepath.Abs(dir)
+	debug.ShouldBeNil(err)
+	return p
+}
+
+func (t historyFileTracker) Get(dir string) *Item {
+	list := t.GetAll()
+	dir = dirnameAbs(dir)
+	for i, item := range list {
+		if dirnameAbs(item.Dir) == dir {
+			return &list[i]
+		}
+	}
+	return nil
+}
+
+func (t historyFileTracker) GetAll() (items []Item) {
 	data, err := ioutil.ReadFile(t.filename())
 	if err != nil {
 		return
 	}
 	json.MustUnmarshal(data, &items)
-	if len(items) > limit {
-		items = items[:limit]
-	}
 	return
 }
 
 func (t historyFileTracker) Append(item Item) {
-	items := append([]Item{item}, t.Get(10)...)
-	ioutil.WriteFile(t.filename(), json.MustMarshal(items), 0644)
+	all := t.GetAll()
+	found := false
+	item.Dir = dirnameAbs(item.Dir)
+	for i, v := range all {
+		if dirnameAbs(v.Dir) == item.Dir {
+			all[i] = item
+			found = true
+			break
+		}
+	}
+	if !found {
+		all = append(all, item)
+	}
+	ioutil.WriteFile(t.filename(), json.MustMarshal(all), 0644)
 }
 
 func (historyFileTracker) filename() string {

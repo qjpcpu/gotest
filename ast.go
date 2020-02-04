@@ -183,11 +183,10 @@ func (s FileTestSuite) SetTop(name, fn string) FileTestSuite {
 	return s
 }
 
-func ReorderByHistory(s FileTestSuite, dir string, items []Item) FileTestSuite {
-	if len(items) > 0 {
+func ReorderByHistory(s FileTestSuite, dir string, item *Item) FileTestSuite {
+	if item != nil {
 		dirAbs, err := filepath.Abs(dir)
 		debug.ShouldBeNil(err)
-		item := items[0]
 		hAbs, err := filepath.Abs(item.Dir)
 		debug.ShouldBeNil(err)
 		if hAbs == dirAbs {
