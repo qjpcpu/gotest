@@ -11,12 +11,15 @@ import (
 	"strings"
 )
 
-func LoadTestFiles(dirname string) FileTestSuite {
+func LoadTestFiles(dirname, gofile string) FileTestSuite {
 	fileList, err := ioutil.ReadDir(dirname)
 	debug.ShouldBeNil(err)
 
 	var files []string
 	for _, file := range fileList {
+		if gofile != "" && gofile != file.Name() {
+			continue
+		}
 		if strings.HasSuffix(file.Name(), "_test.go") {
 			filename := filepath.Join(dirname, file.Name())
 			filename, err := filepath.Abs(filename)

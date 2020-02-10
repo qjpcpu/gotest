@@ -9,8 +9,8 @@ import (
 	"github.com/qjpcpu/common/debug"
 )
 
-func SelectSingleTest(dirname string, lastItem *Item) (name, fn string) {
-	suites := LoadTestFiles(dirname)
+func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
+	suites := LoadTestFiles(dirname, file)
 	if suites.Size() == 0 {
 		debug.Print("No tests found")
 		return
@@ -93,9 +93,9 @@ func buildTestCommand(dir string, name, fn string) string {
 	return fmt.Sprintf(format, args...)
 }
 
-func SelectAndRunTest(dir string) {
+func SelectAndRunTest(dir, file string) {
 	item := History.Get(dir)
-	name, fn := SelectSingleTest(dir, item)
+	name, fn := SelectSingleTest(dir, file, item)
 	if len(name) == 0 {
 		return
 	}
@@ -104,13 +104,18 @@ func SelectAndRunTest(dir string) {
 	debug.Exec(cmd)
 }
 
-func getTestDir(args []string) string {
+func getTestDir(args []string) (dir string, file string) {
 	const currentDir = "."
-	var dir string
 	if len(args) > 1 {
 		dir = args[1]
+		fi, err := os.Stat(dir)
+		debug.ShouldBeNil(err)
+		if !fi.IsDir() {
+			file = filepath.Base(dir)
+			dir = filepath.Dir(dir)
+		}
 	} else {
 		dir = currentDir
 	}
-	return dir
+	return
 }
