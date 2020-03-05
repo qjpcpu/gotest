@@ -122,6 +122,7 @@ github.com/qjpcpu/common v0.0.0-20200202080131-d106acd00be4 h1:7NSPCMYtbNWR/QXEA
 github.com/qjpcpu/common v0.0.0-20200202080131-d106acd00be4/go.mod h1:k3BoGlvdapAbImtb48FHEkfcFw2oOlSV1IYHPUdACP0=
 github.com/qjpcpu/common v0.0.0-20200202095251-237999b00382 h1:GZiASXOXsAIbKiYmIRJWvJJ4JQ//2kRG0dnRk8jhsJ4=
 github.com/qjpcpu/common v0.0.0-20200202095251-237999b00382/go.mod h1:k3BoGlvdapAbImtb48FHEkfcFw2oOlSV1IYHPUdACP0=
+github.com/qjpcpu/common v0.0.0-20200217071110-e56aa2af023f h1:GAadBtJirIuRVq4VMGJNy5JyoCBruzbEnvZlEMuQad8=
 github.com/qjpcpu/filelog v0.0.0-20190530141006-3bfd88b7965b/go.mod h1:MakZZ4fHvczo7zuNjxXmHEIOIi5OcQst5qBMGMRS1cc=
 github.com/qjpcpu/go-prettyjson v0.0.0-20180807071930-15ac12028a3b h1:5qQILWH0Buq+rNvDALc9dUxn0vLViY3w/SPana7jO70=
 github.com/qjpcpu/go-prettyjson v0.0.0-20180807071930-15ac12028a3b/go.mod h1:wEiS6j1KlHktfJk3ft20iJcQRWeNSg54DTM9vaIsan8=

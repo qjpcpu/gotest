@@ -10,3 +10,14 @@ Use the arrow keys to navigate: ↓ ↑ → ←  and / toggles search
     TestExampleTestSuite2.TestExample
     TestSimple
   #+end_src
+
+  #+begin_src 
+gotest debug
+
+# output examples
+Use the arrow keys to navigate: ↓ ↑ → ←  and / toggles search
+? Select test function:
+  ▸ TestExampleTestSuite.TestExample
+    TestExampleTestSuite2.TestExample
+    TestSimple
+  #+end_src

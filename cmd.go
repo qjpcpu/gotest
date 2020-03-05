@@ -9,6 +9,12 @@ import (
 	"github.com/qjpcpu/common/debug"
 )
 
+type GotestArgs struct {
+	Dir     string
+	File    string
+	IsDebug bool
+}
+
 func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
 	suites := LoadTestFiles(dirname, file)
 	if suites.Size() == 0 {
@@ -71,13 +77,20 @@ func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
 	return
 }
 
-func buildTestCommand(dir string, name, fn string) string {
-	format := "go test --run '^%s$' --testify.m '^%s$' --test.v"
+func buildTestCommand(dir string, name, fn string, isDebug bool) string {
+	var exe string
+	if isDebug {
+		exe = `dlv test -- `
+	} else {
+		exe = `go test `
+	}
+	format := "--test.run '^%s$' --testify.m '^%s$' --test.v"
 	args := []interface{}{name, fn}
 	if fn == "" {
-		format = "go test --run '^%s$' --test.v"
+		format = "--test.run '^%s$' --test.v"
 		args = []interface{}{name}
 	}
+	format = exe + format
 
 	wd, err := os.Getwd()
 	debug.ShouldBeNil(err)
@@ -93,29 +106,33 @@ func buildTestCommand(dir string, name, fn string) string {
 	return fmt.Sprintf(format, args...)
 }
 
-func SelectAndRunTest(dir, file string) {
-	item := History.Get(dir)
-	name, fn := SelectSingleTest(dir, file, item)
+func SelectAndRunTest(args GotestArgs) {
+	item := History.Get(args.Dir)
+	name, fn := SelectSingleTest(args.Dir, args.File, item)
 	if len(name) == 0 {
 		return
 	}
-	cmd := buildTestCommand(dir, name, fn)
-	History.Append(Item{Dir: dir, Test: name, Module: fn})
+	cmd := buildTestCommand(args.Dir, name, fn, args.IsDebug)
+	History.Append(Item{Dir: args.Dir, Test: name, Module: fn})
 	debug.Exec(cmd)
 }
 
-func getTestDir(args []string) (dir string, file string) {
+func getTestArgs(args []string) (targs GotestArgs) {
+	if len(args) > 1 && args[1] == `debug` {
+		targs.IsDebug = true
+		args = args[1:]
+	}
 	const currentDir = "."
 	if len(args) > 1 {
-		dir = args[1]
-		fi, err := os.Stat(dir)
+		targs.Dir = args[1]
+		fi, err := os.Stat(targs.Dir)
 		debug.ShouldBeNil(err)
 		if !fi.IsDir() {
-			file = filepath.Base(dir)
-			dir = filepath.Dir(dir)
+			targs.File = filepath.Base(targs.Dir)
+			targs.Dir = filepath.Dir(targs.Dir)
 		}
 	} else {
-		dir = currentDir
+		targs.Dir = currentDir
 	}
 	return
 }
