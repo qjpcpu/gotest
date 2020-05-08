@@ -100,6 +100,12 @@ func buildTestCommand(dir string, name, fn string, isDebug bool) string {
 	debug.ShouldBeNil(err)
 	if wd != dirAbs {
 		format = "cd '%s' && " + format
+		if strings.HasPrefix(dir, wd) && len(wd) > 0 {
+			dir = strings.TrimPrefix(dir, wd)
+			if strings.HasPrefix(dir, "/") {
+				dir = strings.TrimPrefix(dir, "/")
+			}
+		}
 		args = append([]interface{}{dir}, args...)
 	}
 	debug.Print(format, args...)
