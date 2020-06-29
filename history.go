@@ -1,14 +1,18 @@
 package main
 
 import (
-	"github.com/qjpcpu/common/debug"
-	"github.com/qjpcpu/common/json"
-	"io/ioutil"
-	"os"
 	"path/filepath"
+
+	"github.com/qjpcpu/common.v2/assert"
+	"github.com/qjpcpu/common.v2/cli"
 )
 
-var History HistoryTracker = historyFileTracker{}
+const (
+	gotestDir        = "gotest"
+	gotestBucketSize = -1
+)
+
+var History HistoryTracker = historyFileTracker{holder: cli.MustNewHomeFileDB(gotestDir)}
 
 type Item struct {
 	Dir    string
@@ -21,53 +25,27 @@ type HistoryTracker interface {
 	Append(Item)
 }
 
-type historyFileTracker struct{}
+type historyFileTracker struct {
+	holder *cli.FileDB
+}
 
 func dirnameAbs(dir string) string {
 	p, err := filepath.Abs(dir)
-	debug.ShouldBeNil(err)
+	assert.ShouldBeNil(err)
 	return p
 }
 
 func (t historyFileTracker) Get(dir string) *Item {
-	list := t.GetAll()
+	var list []Item
 	dir = dirnameAbs(dir)
-	for i, item := range list {
-		if dirnameAbs(item.Dir) == dir {
-			return &list[i]
-		}
+	t.holder.GetItemHistoryBucket(dir, gotestBucketSize).ListItem(&list)
+	if len(list) > 0 {
+		return &list[0]
 	}
 	return nil
 }
 
-func (t historyFileTracker) GetAll() (items []Item) {
-	data, err := ioutil.ReadFile(t.filename())
-	if err != nil {
-		return
-	}
-	json.MustUnmarshal(data, &items)
-	return
-}
-
 func (t historyFileTracker) Append(item Item) {
-	all := t.GetAll()
-	found := false
 	item.Dir = dirnameAbs(item.Dir)
-	for i, v := range all {
-		if dirnameAbs(v.Dir) == item.Dir {
-			all[i] = item
-			found = true
-			break
-		}
-	}
-	if !found {
-		all = append(all, item)
-	}
-	ioutil.WriteFile(t.filename(), json.MustMarshal(all), 0644)
-}
-
-func (historyFileTracker) filename() string {
-	dir, err := os.UserHomeDir()
-	debug.ShouldBeNil(err)
-	return filepath.Join(dir, ".gotest_history")
+	t.holder.GetItemHistoryBucket(item.Dir, gotestBucketSize).InsertItem(item)
 }

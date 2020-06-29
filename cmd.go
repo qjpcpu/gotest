@@ -6,7 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/qjpcpu/common/debug"
+	"github.com/qjpcpu/common.v2/assert"
+	"github.com/qjpcpu/common.v2/cli"
+	cfmt "github.com/qjpcpu/common.v2/fmt"
+	"github.com/qjpcpu/common.v2/sys"
 )
 
 type GotestArgs struct {
@@ -18,31 +21,21 @@ type GotestArgs struct {
 func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
 	suites := LoadTestFiles(dirname, file)
 	if suites.Size() == 0 {
-		debug.Print("No tests found")
+		cfmt.Print("No tests found")
 		return
 	}
 	suites = ReorderByHistory(suites, dirname, lastItem)
 	if suites.Size() > 20 {
 		suiteNames := suites.SuiteNames()
-		_, name = debug.Select("Select test suite", suiteNames, func(s *debug.SelectWidget) {
-			s.Size = 20
-			s.IsVimMode = true
-			s.HideSelected = true
-			s.Searcher = func(input string, index int) bool {
-				return strings.Contains(strings.ToLower(suiteNames[index]), strings.ToLower(input))
-			}
-		})
+		if i := cli.SelectWithSearch("Select test suite", suiteNames); i != -1 {
+			name = suiteNames[i]
+		}
+
 		if len(suites.SuiteFunctions(name)) > 0 {
-			_, fn = debug.Select("Select test function", suites.SuiteFunctions(name), func(s *debug.SelectWidget) {
-				s.Size = 20
-				s.IsVimMode = true
-				s.HideSelected = true
-				s.StartInSearchMode = false
-				fns := suites.SuiteFunctions(name)
-				s.Searcher = func(input string, index int) bool {
-					return strings.Contains(strings.ToLower(fns[index]), strings.ToLower(input))
-				}
-			})
+			if i := cli.SelectWithSearch("Select test function", suites.SuiteFunctions(name)); i != -1 {
+				fn = suites.SuiteFunctions(name)[i]
+			}
+
 		}
 	} else {
 		var list []string
@@ -56,19 +49,15 @@ func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
 				list = append(list, n)
 			}
 		}
-		_, res := debug.Select("Select test function", list, func(s *debug.SelectWidget) {
-			s.Size = 20
-			s.IsVimMode = true
-			s.HideSelected = true
-			s.StartInSearchMode = false
-			s.Searcher = func(input string, index int) bool {
-				return strings.Contains(strings.ToLower(list[index]), strings.ToLower(input))
-			}
-		})
+		var res string
+		if i := cli.SelectWithSearch("Select test function", list); i != -1 {
+			res = list[i]
+		}
+
 		if res == "" {
 			return
 		}
-		debug.AllowPanic(func() {
+		assert.AllowPanic(func() {
 			arr := strings.Split(res, ".")
 			name = arr[0]
 			fn = arr[1]
@@ -93,11 +82,11 @@ func buildTestCommand(dir string, name, fn string, isDebug bool) string {
 	format = exe + format
 
 	wd, err := os.Getwd()
-	debug.ShouldBeNil(err)
+	assert.ShouldBeNil(err)
 	wd, err = filepath.Abs(wd)
-	debug.ShouldBeNil(err)
+	assert.ShouldBeNil(err)
 	dirAbs, err := filepath.Abs(dir)
-	debug.ShouldBeNil(err)
+	assert.ShouldBeNil(err)
 	if wd != dirAbs {
 		format = "cd '%s' && " + format
 		if strings.HasPrefix(dir, wd) && len(wd) > 0 {
@@ -108,7 +97,7 @@ func buildTestCommand(dir string, name, fn string, isDebug bool) string {
 		}
 		args = append([]interface{}{dir}, args...)
 	}
-	debug.Print(format, args...)
+	cfmt.Print(format, args...)
 	return fmt.Sprintf(format, args...)
 }
 
@@ -120,7 +109,7 @@ func SelectAndRunTest(args GotestArgs) {
 	}
 	cmd := buildTestCommand(args.Dir, name, fn, args.IsDebug)
 	History.Append(Item{Dir: args.Dir, Test: name, Module: fn})
-	debug.Exec(cmd)
+	sys.Exec(cmd)
 }
 
 func getTestArgs(args []string) (targs GotestArgs) {
@@ -132,7 +121,7 @@ func getTestArgs(args []string) (targs GotestArgs) {
 	if len(args) > 1 {
 		targs.Dir = args[1]
 		fi, err := os.Stat(targs.Dir)
-		debug.ShouldBeNil(err)
+		assert.ShouldBeNil(err)
 		if !fi.IsDir() {
 			targs.File = filepath.Base(targs.Dir)
 			targs.Dir = filepath.Dir(targs.Dir)

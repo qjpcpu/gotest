@@ -36,6 +36,9 @@ func (suite *ExampleTestSuite2) TestExample() {
 	assert.Equal(suite.T(), 5, suite.VariableThatShouldStartAtFive)
 }
 
+func (suite *ExampleTestSuite2) TestExample2() {
+	assert.Equal(suite.T(), 5, suite.VariableThatShouldStartAtFive)
+}
 func TestExampleTestSuite2(t *testing.T) {
 	suite.Run(t, &ExampleTestSuite2{})
 }

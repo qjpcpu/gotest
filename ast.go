@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/qjpcpu/common/debug"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -9,11 +8,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/qjpcpu/common.v2/assert"
 )
 
 func LoadTestFiles(dirname, gofile string) FileTestSuite {
 	fileList, err := ioutil.ReadDir(dirname)
-	debug.ShouldBeNil(err)
+	assert.ShouldBeNil(err)
 
 	var files []string
 	for _, file := range fileList {
@@ -23,7 +24,7 @@ func LoadTestFiles(dirname, gofile string) FileTestSuite {
 		if strings.HasSuffix(file.Name(), "_test.go") {
 			filename := filepath.Join(dirname, file.Name())
 			filename, err := filepath.Abs(filename)
-			debug.ShouldBeNil(err)
+			assert.ShouldBeNil(err)
 			files = append(files, filename)
 		}
 	}
@@ -38,11 +39,7 @@ func LoadTestFiles(dirname, gofile string) FileTestSuite {
 func ParseTestSuiteFile(filename string) FileTestSuite {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filename, nil, 0)
-	debug.ShouldBeNil(err)
-
-	if debug.IsDebug() {
-		ast.Print(fset, f)
-	}
+	assert.ShouldBeNil(err)
 
 	typeToMainFunc := make(map[string]string)
 	typeMethods := make(map[string][]string)
@@ -50,19 +47,19 @@ func ParseTestSuiteFile(filename string) FileTestSuite {
 	for _, decl := range f.Decls {
 		/* function */
 		if declFn, ok := decl.(*ast.FuncDecl); ok {
-			debug.AllowPanic(func() {
+			assert.AllowPanic(func() {
 				declFn := decl.(*ast.FuncDecl)
 				name := declFn.Name.Name
-				debug.ShouldBeTrue(strings.HasPrefix(name, "Test"))
+				assert.ShouldBeTrue(strings.HasPrefix(name, "Test"))
 
-				debug.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).X.(*ast.Ident).Name, "testing")
+				assert.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).X.(*ast.Ident).Name, "testing")
 
-				debug.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).Sel.Name, "T")
+				assert.ShouldEqual(declFn.Type.Params.List[0].Type.(*ast.StarExpr).X.(*ast.SelectorExpr).Sel.Name, "T")
 
-				if isSimpleTest := debug.AllowPanic(func() {
+				if isSimpleTest := assert.AllowPanic(func() {
 					callExpr := declFn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
-					debug.ShouldEqual(callExpr.Fun.(*ast.SelectorExpr).Sel.Name, "Run")
-					debug.ShouldSuccessAtLeastOne(
+					assert.ShouldEqual(callExpr.Fun.(*ast.SelectorExpr).Sel.Name, "Run")
+					assert.ShouldSuccessAtLeastOne(
 						func() {
 							tname := callExpr.Args[1].(*ast.UnaryExpr).X.(*ast.CompositeLit).Type.(*ast.Ident).Name
 							typeToMainFunc[tname] = name
@@ -80,16 +77,16 @@ func ParseTestSuiteFile(filename string) FileTestSuite {
 					simpleGoTest[name] = true
 				}
 			})
-			debug.AllowPanic(func() {
-				debug.ShouldSuccessAtLeastOne(
+			assert.AllowPanic(func() {
+				assert.ShouldSuccessAtLeastOne(
 					func() {
 						name := declFn.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
-						debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+						assert.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
 						typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
 					},
 					func() {
 						name := declFn.Recv.List[0].Type.(*ast.Ident).Name
-						debug.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
+						assert.ShouldBeTrue(strings.HasPrefix(declFn.Name.Name, "Test"))
 						typeMethods[name] = append(typeMethods[name], declFn.Name.Name)
 					},
 				)
@@ -189,9 +186,9 @@ func (s FileTestSuite) SetTop(name, fn string) FileTestSuite {
 func ReorderByHistory(s FileTestSuite, dir string, item *Item) FileTestSuite {
 	if item != nil {
 		dirAbs, err := filepath.Abs(dir)
-		debug.ShouldBeNil(err)
+		assert.ShouldBeNil(err)
 		hAbs, err := filepath.Abs(item.Dir)
-		debug.ShouldBeNil(err)
+		assert.ShouldBeNil(err)
 		if hAbs == dirAbs {
 			s = s.SetTop(item.Test, item.Module)
 		}

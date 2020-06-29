@@ -1,2 +1,4 @@
 /testify
 /gotest
+go.sum
+/vendor
