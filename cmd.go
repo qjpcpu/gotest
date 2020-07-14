@@ -9,6 +9,7 @@ import (
 	"github.com/qjpcpu/common.v2/assert"
 	"github.com/qjpcpu/common.v2/cli"
 	cfmt "github.com/qjpcpu/common.v2/fmt"
+	"github.com/qjpcpu/common.v2/stringutil"
 	"github.com/qjpcpu/common.v2/sys"
 )
 
@@ -16,6 +17,8 @@ type GotestArgs struct {
 	Dir     string
 	File    string
 	IsDebug bool
+	Verbose bool
+	Timeout string
 }
 
 func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
@@ -66,18 +69,24 @@ func SelectSingleTest(dirname, file string, lastItem *Item) (name, fn string) {
 	return
 }
 
-func buildTestCommand(dir string, name, fn string, isDebug bool) string {
+func buildTestCommand(dir string, name, fn string, targs GotestArgs) string {
 	var exe string
-	if isDebug {
+	if targs.IsDebug {
 		exe = `dlv test -- `
 	} else {
 		exe = `go test `
 	}
-	format := "--test.run '^%s$' --testify.m '^%s$' --test.v"
+	format := "--test.run '^%s$' --testify.m '^%s$'"
 	args := []interface{}{name, fn}
 	if fn == "" {
-		format = "--test.run '^%s$' --test.v"
+		format = "--test.run '^%s$'"
 		args = []interface{}{name}
+	}
+	if targs.Verbose {
+		format += " --test.v"
+	}
+	if !stringutil.IsBlankStr(targs.Timeout) {
+		format += fmt.Sprintf(" --test.timeout %s", targs.Timeout)
 	}
 	format = exe + format
 
@@ -107,12 +116,31 @@ func SelectAndRunTest(args GotestArgs) {
 	if len(name) == 0 {
 		return
 	}
-	cmd := buildTestCommand(args.Dir, name, fn, args.IsDebug)
+	cmd := buildTestCommand(args.Dir, name, fn, args)
 	History.Append(Item{Dir: args.Dir, Test: name, Module: fn})
 	sys.Exec(cmd)
 }
 
 func getTestArgs(args []string) (targs GotestArgs) {
+	/* has verbose */
+	if targs.Verbose = stringutil.ContainString(args, "-v"); targs.Verbose {
+		args = stringutil.RemoveString(args, "-v")
+	}
+	/* timeout */
+	if stringutil.ContainString(args, "-timeout") {
+		i := 0
+		for ; i < len(args); i++ {
+			if args[i] == "-timeout" {
+				targs.Timeout = args[i+1]
+				break
+			}
+		}
+		for j := i + 2; j < len(args); j++ {
+			args[j-2] = args[j]
+		}
+		args = args[:len(args)-2]
+	}
+
 	if len(args) > 1 && args[1] == `debug` {
 		targs.IsDebug = true
 		args = args[1:]
@@ -129,5 +157,6 @@ func getTestArgs(args []string) (targs GotestArgs) {
 	} else {
 		targs.Dir = currentDir
 	}
+
 	return
 }
